@@ -1,2 +1,5 @@
 # AppfolioInsEmail
 Uses the Appfolio API to check AP aging balance for >$0 and match to insurance record to see if insurance is expired and if both are true sends an email to the vendor to submit new insurance certificate
+There is a setting in Appfolio that prevents payments to vendors with expired wokers comp or liability insurance. To get their record updated requires obtaining new insurance certificates from the vendor. Appfolio doesn't have an automated notification system so it has to be manually monitored. This requires checking the exceptions box when issuing payments, manually going in to each vendor record, copying the email address and sending an email requesting updated insurance docs.
+The AppfolioInsEmail code will do this for you. It wil pull the AP aging from the API and match it to the vendor record. If there is a balance due and the insurance is expired it will send them an email requesting the insurance documents. 
+You can use Windows Task Manager to run this code, weekly, monthly, or however often you want to notify them. 
