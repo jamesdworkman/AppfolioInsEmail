@@ -1,0 +1,58 @@
+import pandas as pd
+import requests
+import datetime
+import time
+
+url = "https://clientID:clientSecret@--(companyDomainNameHere)--.appfolio.com/api/v1/reports/aged_payables_summary.json?from_date=01/01/2018&to_date=01/31/2033"
+r = requests.get(url, auth=('--(userCodeHere)--', '--(passwordCodeHere)--'))
+results = r.json()['results']
+df = pd.json_normalize(results)
+df2= df.replace(',','', regex=True)
+df2['AmountPayable']= df2['AmountPayable'].astype('float64')
+df2['InvoicePartyId']= df2['InvoicePartyId'].astype('int')
+Final1 = df2[['InvoicePartyId', 'PayeeName', 'AmountPayable']]
+
+
+url = "https://clientID:clientSecret@--(companyDomainNameHere)--.appfolio.com/api/v1/reports/vendor_directory"
+r = requests.get(url, auth=('--(userCodeHere)--', '--(passwordCodeHere)--'))
+results = r.json()['results']
+df = pd.json_normalize(results)
+df2= df.replace(',','', regex=True)
+df2['LiabilityInsExpires'] = pd.to_datetime(df2.LiabilityInsExpires)
+df2['WorkersCompExpires'] = pd.to_datetime(df2.WorkersCompExpires)
+df2['VendorId']= df2['VendorId'].astype('int')
+df3 = df2.query('WorkersCompExpires<=datetime.date.today()')
+Final2 = df3[['VendorId', 'LiabilityInsExpires', 'WorkersCompExpires','Email']]
+
+TotalDF = Final2.merge(Final1, how='inner',left_on='VendorId',right_on='InvoicePartyId')
+
+import pandas as pd
+import win32com.client as win32
+names = TotalDF['PayeeName']
+emails = TotalDF['Email']
+expirationdates = TotalDF['WorkersCompExpires']
+for i in range(len(TotalDF)):
+    # for every record get the name and the email addresses
+    name = names[i]
+    email = emails[i]
+    expirationdate = expirationdates[i]
+    outlook = win32.Dispatch('outlook.application')
+    mail = outlook.CreateItem(0)
+    mail.To = email
+    mail.Subject = 'Expired Workers Compensation Insurance on File at (companyNameHere)'
+    mail.Body = ''
+    mail.HTMLBody = f"""\
+    <html>
+      <head></head>
+      <body>
+        <p>Hello,<br><br>
+           Our records are showing an expired Workers Comp insurance date of {expirationdate} on file for {name}.<br><br>
+           Our system won't allow us issue payments until we get this updated. Can you please email your current workers comp insurance certificate to vendors@(companyDomainHere)?<br><br>
+           Thank you,<br><br>
+           James Workman<br>
+           Accounting Manager, (companyNameHere)<br>           
+           (signatureHere)
+        </p>
+      </body>
+    </html>"""  # this field is optional
+    mail.Send()
