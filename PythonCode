@@ -3,6 +3,7 @@ import requests
 import datetime
 import time
 
+# this pulls the aged payables for all properties combined and selects the vendor number, name and amount due
 url = "https://clientID:clientSecret@--(companyDomainNameHere)--.appfolio.com/api/v1/reports/aged_payables_summary.json?from_date=01/01/2018&to_date=01/31/2033"
 r = requests.get(url, auth=('--(userCodeHere)--', '--(passwordCodeHere)--'))
 results = r.json()['results']
@@ -12,7 +13,7 @@ df2['AmountPayable']= df2['AmountPayable'].astype('float64')
 df2['InvoicePartyId']= df2['InvoicePartyId'].astype('int')
 Final1 = df2[['InvoicePartyId', 'PayeeName', 'AmountPayable']]
 
-
+# this pulls the vendors directory and filters by those with expired insurance
 url = "https://clientID:clientSecret@--(companyDomainNameHere)--.appfolio.com/api/v1/reports/vendor_directory"
 r = requests.get(url, auth=('--(userCodeHere)--', '--(passwordCodeHere)--'))
 results = r.json()['results']
@@ -24,9 +25,10 @@ df2['VendorId']= df2['VendorId'].astype('int')
 df3 = df2.query('WorkersCompExpires<=datetime.date.today()')
 Final2 = df3[['VendorId', 'LiabilityInsExpires', 'WorkersCompExpires','Email']]
 
+# this merges the two above dataframes
 TotalDF = Final2.merge(Final1, how='inner',left_on='VendorId',right_on='InvoicePartyId')
 
-import pandas as pd
+# this uses the merged dataframe to send out emails
 import win32com.client as win32
 names = TotalDF['PayeeName']
 emails = TotalDF['Email']
@@ -39,7 +41,7 @@ for i in range(len(TotalDF)):
     outlook = win32.Dispatch('outlook.application')
     mail = outlook.CreateItem(0)
     mail.To = email
-    mail.Subject = 'Expired Workers Compensation Insurance on File at (companyNameHere)'
+    mail.Subject = 'Expired Workers Compensation Insurance on File at --(companyNameHere)--'
     mail.Body = ''
     mail.HTMLBody = f"""\
     <html>
@@ -50,8 +52,8 @@ for i in range(len(TotalDF)):
            Our system won't allow us issue payments until we get this updated. Can you please email your current workers comp insurance certificate to vendors@(companyDomainHere)?<br><br>
            Thank you,<br><br>
            James Workman<br>
-           Accounting Manager, (companyNameHere)<br>           
-           (signatureHere)
+           Accounting Manager, --(companyNameHere)--<br>           
+           --(signatureHere)--
         </p>
       </body>
     </html>"""  # this field is optional
